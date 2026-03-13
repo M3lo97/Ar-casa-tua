@@ -5,347 +5,634 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1A1714">
 <title>AR Casa Futura</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&family=Italiana&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@400&family=Italiana&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --terra:#8B4A3C;--gold:#C4A46B;--muschio:#4A5240;
-  --bg:#1A1714;--surface:#221F1C;--surface2:#2E2A26;
-  --text:#EDE8E0;--dim:#9A8E82;--ottone:#8A6A3C;
-}
+:root{--terra:#8B4A3C;--gold:#C4A46B;--bg:#1A1714;--surface:#221F1C;--s2:#2E2A26;--text:#EDE8E0;--dim:#9A8E82;--ottone:#8A6A3C}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'DM Mono',monospace;color:var(--text);-webkit-tap-highlight-color:transparent}
 
-#splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .7s ease}
+#splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease}
 #splash.out{opacity:0;pointer-events:none}
-.sp-logo{font-family:'Italiana',serif;font-size:clamp(2.8rem,10vw,4.5rem);text-align:center;line-height:1;letter-spacing:.04em}
+.sp-logo{font-family:'Italiana',serif;font-size:clamp(3rem,12vw,5rem);text-align:center;line-height:1;letter-spacing:.04em}
 .sp-sub{font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);margin-top:.8rem}
-.sp-bar{width:180px;height:1px;background:var(--surface2);margin-top:2.5rem;overflow:hidden}
-.sp-fill{height:100%;width:0;background:var(--gold);transition:width 2s cubic-bezier(.4,0,.2,1)}
+.sp-bar{width:160px;height:1px;background:var(--s2);margin-top:2rem;overflow:hidden}
+.sp-fill{height:100%;width:0;background:var(--gold);transition:width 1.8s cubic-bezier(.4,0,.2,1)}
 
 #app{width:100%;height:100%;display:flex;flex-direction:column}
-
-/* Camera + Three.js canvas layered */
-#viewport{position:relative;flex:1;overflow:hidden;background:#000;min-height:0}
+#viewport{position:relative;flex:1;overflow:hidden;background:#111;min-height:0}
 #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
-#threeCanvas{position:absolute;inset:0;width:100%!important;height:100%!important;z-index:1;pointer-events:none}
+#c3d{position:absolute;inset:0;z-index:1;pointer-events:none}
 
-#cam-prompt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem;background:var(--bg);z-index:20}
-#cam-prompt.hidden{display:none}
-.cam-icon{width:64px;height:64px;border:1px solid rgba(196,164,107,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:camP 2s ease-in-out infinite}
-@keyframes camP{0%,100%{box-shadow:0 0 0 0 rgba(196,164,107,.3)}50%{box-shadow:0 0 0 12px rgba(196,164,107,0)}}
-.cam-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;text-align:center;line-height:1.3}
-.cam-sub{font-size:.58rem;color:var(--dim);text-align:center;line-height:1.8;max-width:280px}
-.cam-btn{background:var(--terra);border:none;color:#fff;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;padding:.85rem 2rem;border-radius:2px;cursor:pointer}
-#cam-err{font-size:.55rem;color:var(--terra);text-align:center;margin-top:.5rem;display:none;line-height:1.8;max-width:280px}
+#camprompt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;padding:2rem;background:var(--bg);z-index:20}
+#camprompt.hidden{display:none}
+.ci{width:64px;height:64px;border:1px solid rgba(196,164,107,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;animation:cp 2s infinite}
+@keyframes cp{0%,100%{box-shadow:0 0 0 0 rgba(196,164,107,.3)}50%{box-shadow:0 0 0 14px rgba(196,164,107,0)}}
+.ct{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;text-align:center}
+.cs{font-size:.58rem;color:var(--dim);text-align:center;line-height:1.9;max-width:260px}
+.cb{background:var(--terra);border:none;color:#fff;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;padding:.9rem 2.2rem;border-radius:2px;cursor:pointer}
+#cerr{font-size:.55rem;color:var(--terra);text-align:center;display:none;line-height:1.8;max-width:260px}
 
-/* Loading overlay */
-#loading{position:absolute;inset:0;background:rgba(26,23,20,.92);z-index:15;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;display:none}
-#loading.show{display:flex}
-.ld-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300;color:var(--text)}
-.ld-bar{width:200px;height:1px;background:var(--surface2);overflow:hidden}
-.ld-fill{height:100%;background:var(--gold);transition:width .4s ease;width:0}
-.ld-lbl{font-size:.52rem;color:var(--dim);letter-spacing:.1em}
+#loadover{position:absolute;inset:0;background:rgba(26,23,20,.93);z-index:15;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem}
+#loadover.show{display:flex}
+.lt{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:300}
+.lb{width:200px;height:1px;background:var(--s2);overflow:hidden}
+.lf{height:100%;background:var(--gold);transition:width .35s ease;width:0}
+.ll{font-size:.5rem;color:var(--dim);letter-spacing:.1em;min-height:1rem;text-align:center}
 
-/* HUD */
-.hud-corner{position:absolute;width:22px;height:22px;border-color:var(--gold);border-style:solid;opacity:.5;pointer-events:none;z-index:5}
-.hud-corner.tl{top:12px;left:12px;border-width:1px 0 0 1px}
-.hud-corner.tr{top:12px;right:12px;border-width:1px 1px 0 0}
-.hud-corner.bl{bottom:70px;left:12px;border-width:0 0 1px 1px}
-.hud-corner.br{bottom:70px;right:12px;border-width:0 1px 1px 0}
-#hud-top{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:.5rem;letter-spacing:.2em;color:var(--gold);opacity:.7;white-space:nowrap;pointer-events:none;z-index:5}
+.hc{position:absolute;width:20px;height:20px;border-color:var(--gold);border-style:solid;opacity:.45;pointer-events:none;z-index:5}
+.hc.tl{top:12px;left:12px;border-width:1px 0 0 1px}
+.hc.tr{top:12px;right:12px;border-width:1px 1px 0 0}
+.hc.bl{bottom:68px;left:12px;border-width:0 0 1px 1px}
+.hc.br{bottom:68px;right:12px;border-width:0 1px 1px 0}
+#hudtop{position:absolute;top:13px;left:50%;transform:translateX(-50%);font-size:.48rem;letter-spacing:.18em;color:var(--gold);opacity:.65;white-space:nowrap;pointer-events:none;z-index:5}
 
-/* Furniture selector */
-#furn-selector{position:absolute;bottom:70px;left:0;right:0;z-index:10;padding:.5rem .8rem;display:none;gap:.4rem;overflow-x:auto;background:linear-gradient(0deg,rgba(26,23,20,.9),transparent)}
-#furn-selector.show{display:flex}
-#furn-selector::-webkit-scrollbar{display:none}
-.furn-chip{background:rgba(34,31,28,.9);border:1px solid rgba(196,164,107,.25);color:var(--text);font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.1em;padding:.4rem .7rem;border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
-.furn-chip:active,.furn-chip.active{background:rgba(139,74,60,.3);border-color:var(--terra);color:var(--gold)}
+#controls{background:rgba(26,23,20,.97);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.05);padding:.6rem .8rem;display:flex;align-items:center;gap:.45rem;flex-shrink:0;z-index:10}
+.cb2{background:transparent;border:1px solid rgba(255,255,255,.1);color:var(--dim);font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;padding:.4rem .6rem;border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.cb2:active,.cb2.on{color:var(--gold);border-color:rgba(196,164,107,.4);background:rgba(196,164,107,.07)}
+.cb2:disabled{opacity:.3;cursor:not-allowed}
+.cgen{flex:1;background:var(--terra);border:none;color:#fff;font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;padding:.5rem .8rem;border-radius:2px;cursor:pointer}
+.cgen:disabled{background:var(--s2);color:var(--dim);cursor:not-allowed}
 
-/* Controls */
-#controls{background:rgba(26,23,20,.97);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.06);padding:.65rem .8rem;display:flex;align-items:center;gap:.5rem;flex-shrink:0;z-index:10}
-.c-btn{background:transparent;border:1px solid rgba(255,255,255,.1);color:var(--dim);font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;padding:.42rem .65rem;border-radius:2px;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
-.c-btn:active,.c-btn.on{color:var(--gold);border-color:rgba(196,164,107,.4);background:rgba(196,164,107,.07)}
-.c-btn:disabled{opacity:.35;cursor:not-allowed}
-.c-gen{flex:1;background:var(--terra);border:none;color:#fff;font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:.52rem .8rem;border-radius:2px;cursor:pointer;transition:background .2s;white-space:nowrap}
-.c-gen:disabled{background:var(--surface2);color:var(--dim);cursor:not-allowed}
-
-/* Sheet */
-#sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid rgba(255,255,255,.07);border-radius:14px 14px 0 0;transform:translateY(100%);transition:transform .4s cubic-bezier(.4,0,.2,1);z-index:200;max-height:82vh;display:flex;flex-direction:column}
+#sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid rgba(255,255,255,.06);border-radius:12px 12px 0 0;transform:translateY(100%);transition:transform .38s cubic-bezier(.4,0,.2,1);z-index:200;max-height:80vh;display:flex;flex-direction:column}
 #sheet.open{transform:translateY(0)}
-.sh-handle{width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:.7rem auto .4rem;flex-shrink:0;cursor:pointer}
-.sh-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.05);padding:0 .8rem;flex-shrink:0;overflow-x:auto}
-.sh-tabs::-webkit-scrollbar{display:none}
-.s-tab{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);padding:.55rem .65rem;border-bottom:1px solid transparent;white-space:nowrap;margin-bottom:-1px;transition:all .15s}
-.s-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
-.sh-body{flex:1;overflow-y:auto;padding:.9rem 1rem}
-.sh-body::-webkit-scrollbar{width:2px}
-.sh-body::-webkit-scrollbar-thumb{background:var(--surface2)}
-.s-lbl{font-size:.48rem;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);margin-bottom:.55rem;display:block}
-.pal-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;margin-bottom:1.2rem}
-.swatch{height:38px;border-radius:2px}
-.sw-name{font-size:.42rem;color:var(--dim);text-align:center;margin-top:.25rem;line-height:1.3}
-.mat-row{display:flex;gap:.65rem;align-items:flex-start;padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
-.mat-row:last-child{border:none}
-.mat-dot{width:24px;height:24px;border-radius:2px;flex-shrink:0;margin-top:2px}
-.mat-n{font-family:'Cormorant Garamond',serif;font-size:.92rem;color:var(--text);line-height:1}
-.mat-s{font-size:.5rem;color:var(--dim);margin-top:.2rem;line-height:1.5}
-.mat-w{font-size:.5rem;color:var(--gold);margin-top:.1rem}
-.furn-row{padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
-.furn-row:last-child{border:none}
-.furn-n{font-family:'Cormorant Garamond',serif;font-size:.98rem;color:var(--text)}
-.furn-b{font-size:.48rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin:.15rem 0}
-.furn-d{font-size:.52rem;color:var(--dim);line-height:1.6}
-.detail-card{background:var(--surface2);border-left:2px solid var(--terra);border-radius:2px;padding:.65rem .75rem;margin-bottom:.45rem}
-.d-title{font-family:'Cormorant Garamond',serif;font-size:.9rem;color:var(--text);margin-bottom:.2rem}
-.d-text{font-size:.52rem;color:var(--dim);line-height:1.7}
-.chips{display:flex;flex-wrap:wrap;gap:.32rem;margin-bottom:.75rem}
-.chip{background:none;border:1px solid rgba(255,255,255,.08);color:var(--dim);font-family:'DM Mono',monospace;font-size:.52rem;padding:.26rem .52rem;border-radius:2px;cursor:pointer;transition:all .15s}
-.chip.on{color:var(--gold);border-color:rgba(196,164,107,.45);background:rgba(196,164,107,.07)}
-select.brief-sel{width:100%;background:var(--surface2);border:1px solid rgba(255,255,255,.08);color:var(--text);font-family:'DM Mono',monospace;font-size:.6rem;padding:.42rem .6rem;border-radius:2px;appearance:none;margin-bottom:.75rem}
-.vision-bar{background:linear-gradient(90deg,var(--terra),var(--ottone));padding:.65rem 1rem;font-family:'Cormorant Garamond',serif;font-size:.82rem;font-style:italic;font-weight:300;color:rgba(255,255,255,.9);text-align:center;line-height:1.5;flex-shrink:0}
-.prog-wrap{padding:0 1rem .45rem;flex-shrink:0}
-.prog-bar{height:1px;background:var(--surface2);overflow:hidden}
-.prog-fill{height:100%;background:var(--gold);width:0;transition:width .3s ease}
-.prog-lbl{font-size:.48rem;color:var(--dim);letter-spacing:.1em;margin-top:.28rem;text-align:center;min-height:.8rem}
-
-/* Touch hint */
-#touch-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8;text-align:center;pointer-events:none;opacity:0;transition:opacity .5s}
-#touch-hint.show{opacity:1}
-.th-circle{width:60px;height:60px;border:1.5px solid rgba(196,164,107,.5);border-radius:50%;margin:0 auto .5rem;animation:thPulse 1.5s ease-in-out infinite}
-@keyframes thPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.15);opacity:1}}
-.th-text{font-size:.55rem;color:var(--gold);letter-spacing:.15em;text-transform:uppercase}
+.shh{width:34px;height:3px;background:rgba(255,255,255,.14);border-radius:2px;margin:.7rem auto .3rem;flex-shrink:0;cursor:pointer}
+.shtabs{display:flex;border-bottom:1px solid rgba(255,255,255,.05);padding:0 .7rem;flex-shrink:0;overflow-x:auto}
+.shtabs::-webkit-scrollbar{display:none}
+.stab{background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);padding:.5rem .6rem;border-bottom:1px solid transparent;white-space:nowrap;margin-bottom:-1px;transition:all .15s}
+.stab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.shbody{flex:1;overflow-y:auto;padding:.85rem .95rem}
+.shbody::-webkit-scrollbar{width:2px}
+.shbody::-webkit-scrollbar-thumb{background:var(--s2)}
+.slbl{font-size:.46rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:.5rem;display:block}
+.pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;margin-bottom:1rem}
+.sw{height:36px;border-radius:2px}
+.swn{font-size:.4rem;color:var(--dim);text-align:center;margin-top:.2rem;line-height:1.3}
+.mrow{display:flex;gap:.6rem;align-items:flex-start;padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.mrow:last-child{border:none}
+.mdot{width:22px;height:22px;border-radius:2px;flex-shrink:0;margin-top:2px}
+.mn{font-family:'Cormorant Garamond',serif;font-size:.9rem;color:var(--text);line-height:1}
+.ms{font-size:.48rem;color:var(--dim);margin-top:.18rem;line-height:1.5}
+.mw{font-size:.48rem;color:var(--gold);margin-top:.08rem}
+.frow{padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.frow:last-child{border:none}
+.fn{font-family:'Cormorant Garamond',serif;font-size:.95rem;color:var(--text)}
+.fb{font-size:.46rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin:.12rem 0}
+.fd{font-size:.5rem;color:var(--dim);line-height:1.6}
+.dc{background:var(--s2);border-left:2px solid var(--terra);border-radius:2px;padding:.6rem .7rem;margin-bottom:.4rem}
+.dct{font-family:'Cormorant Garamond',serif;font-size:.88rem;color:var(--text);margin-bottom:.18rem}
+.dcc{font-size:.5rem;color:var(--dim);line-height:1.7}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.7rem}
+.chip{background:none;border:1px solid rgba(255,255,255,.08);color:var(--dim);font-family:'DM Mono',monospace;font-size:.5rem;padding:.25rem .5rem;border-radius:2px;cursor:pointer}
+.chip.on{color:var(--gold);border-color:rgba(196,164,107,.4);background:rgba(196,164,107,.07)}
+.bsel{width:100%;background:var(--s2);border:1px solid rgba(255,255,255,.08);color:var(--text);font-family:'DM Mono',monospace;font-size:.58rem;padding:.4rem .6rem;border-radius:2px;appearance:none;margin-bottom:.7rem}
+.vbar{background:linear-gradient(90deg,var(--terra),var(--ottone));padding:.6rem 1rem;font-family:'Cormorant Garamond',serif;font-size:.8rem;font-style:italic;font-weight:300;color:rgba(255,255,255,.9);text-align:center;line-height:1.5;flex-shrink:0}
+.pw{padding:0 .95rem .4rem;flex-shrink:0}
+.pb{height:1px;background:var(--s2);overflow:hidden}
+.pf{height:100%;background:var(--gold);width:0;transition:width .3s}
+.pl{font-size:.46rem;color:var(--dim);letter-spacing:.08em;margin-top:.25rem;text-align:center;min-height:.75rem}
 </style>
 </head>
 <body>
+
 <div id="splash">
   <div class="sp-logo">AR Casa<br>Futura</div>
-  <div class="sp-sub">3D Interior Design · AR</div>
-  <div class="sp-bar"><div class="sp-fill" id="spFill"></div></div>
+  <div class="sp-sub">3D · Interior Design · AR</div>
+  <div class="sp-bar"><div class="sp-fill" id="spf"></div></div>
 </div>
 
 <div id="app">
   <div id="viewport">
     <video id="video" autoplay playsinline muted></video>
-    <canvas id="threeCanvas"></canvas>
+    <canvas id="c3d"></canvas>
 
-    <div id="cam-prompt">
-      <div class="cam-icon">📷</div>
-      <div class="cam-title">Attiva la Camera</div>
-      <div class="cam-sub">Punta verso la stanza. I mobili 3D verranno posizionati sul pavimento in tempo reale.</div>
-      <button class="cam-btn" id="camBtn">◉ Attiva Camera</button>
-      <div id="cam-err"></div>
+    <div id="camprompt">
+      <div class="ci">📷</div>
+      <div class="ct">Attiva la Camera</div>
+      <div class="cs">Punta verso la stanza e genera la scena 3D sovrapposta in tempo reale.</div>
+      <button class="cb" id="camBtn">◉ Attiva Camera</button>
+      <div id="cerr"></div>
     </div>
 
-    <div id="loading">
-      <div class="ld-title">Caricamento modelli 3D…</div>
-      <div class="ld-bar"><div class="ld-fill" id="ldFill"></div></div>
-      <div class="ld-lbl" id="ldLbl">Inizializzazione Three.js…</div>
+    <div id="loadover">
+      <div class="lt">Costruzione scena 3D…</div>
+      <div class="lb"><div class="lf" id="lf"></div></div>
+      <div class="ll" id="ll"></div>
     </div>
 
-    <div class="hud-corner tl"></div>
-    <div class="hud-corner tr"></div>
-    <div class="hud-corner bl"></div>
-    <div class="hud-corner br"></div>
-    <div id="hud-top">PUNTA LA CAMERA SULLA STANZA</div>
-
-    <div id="touch-hint">
-      <div class="th-circle">👆</div>
-      <div class="th-text">Tocca per posizionare</div>
-    </div>
-
-    <!-- Furniture selector bar -->
-    <div id="furn-selector">
-      <button class="furn-chip active" data-furn="sofa">🛋 Divano</button>
-      <button class="furn-chip" data-furn="table">☕ Coffee Table</button>
-      <button class="furn-chip" data-furn="lamp">💡 Lampada</button>
-      <button class="furn-chip" data-furn="plant">🌿 Monstera</button>
-      <button class="furn-chip" data-furn="shelf">📚 Libreria</button>
-      <button class="furn-chip" data-furn="chair">🪑 Poltrona</button>
-    </div>
+    <div class="hc tl"></div><div class="hc tr"></div>
+    <div class="hc bl"></div><div class="hc br"></div>
+    <div id="hudtop">PUNTA LA CAMERA SULLA STANZA</div>
   </div>
 
   <div id="controls">
-    <button class="c-btn" id="btnCam">📷</button>
-    <button class="c-btn" id="btnFurn" disabled>🛋 Mobili</button>
-    <button class="c-btn" id="btnClear" disabled>🗑</button>
-    <button class="c-gen" id="btnGen" disabled>◉ Genera Stanza AR</button>
-    <button class="c-btn" id="btnSheet" disabled>↑</button>
+    <button class="cb2" id="bCam">📷</button>
+    <button class="cb2" id="bClear" disabled>🗑 Pulisci</button>
+    <button class="cgen" id="bGen" disabled>◉ Genera Stanza AR</button>
+    <button class="cb2" id="bSheet" disabled>↑ Info</button>
   </div>
 
   <div id="sheet">
-    <div class="sh-handle" id="shHandle"></div>
-    <div class="sh-tabs" id="shTabs">
-      <button class="s-tab active" data-tab="brief">Brief</button>
-      <button class="s-tab" data-tab="palette">Palette</button>
-      <button class="s-tab" data-tab="materiali">Materiali</button>
-      <button class="s-tab" data-tab="arredi">Arredi</button>
-      <button class="s-tab" data-tab="dettagli">Dettagli</button>
+    <div class="shh" id="shh"></div>
+    <div class="shtabs" id="shtabs">
+      <button class="stab on" data-t="brief">Brief</button>
+      <button class="stab" data-t="pal">Palette</button>
+      <button class="stab" data-t="mat">Materiali</button>
+      <button class="stab" data-t="arr">Arredi</button>
+      <button class="stab" data-t="det">Dettagli</button>
     </div>
-    <div class="prog-wrap" id="progWrap" style="display:none">
-      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
-      <div class="prog-lbl" id="progLbl"></div>
-    </div>
-    <div class="sh-body" id="shBody"></div>
-    <div class="vision-bar" id="visionBar" style="display:none">
-      "Quando la luce tocca il legno bruciato, capisci che non stai guardando un render — stai guardando casa tua come non l'avevi mai immaginata."
-    </div>
+    <div class="pw" id="pw" style="display:none"><div class="pb"><div class="pf" id="pf"></div></div><div class="pl" id="pl"></div></div>
+    <div class="shbody" id="shbody"></div>
+    <div class="vbar" id="vbar" style="display:none">"Quando la luce tocca il legno bruciato, capisci che non stai guardando un render — stai guardando casa tua come non l'avevi mai immaginata."</div>
   </div>
 </div>
 
-<!-- THREE.JS + LOADERS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+
 // ── SPLASH ──
-setTimeout(()=>{ document.getElementById('spFill').style.width='100%' },80)
+setTimeout(()=>document.getElementById('spf').style.width='100%', 100);
 setTimeout(()=>{
-  const s=document.getElementById('splash')
-  s.classList.add('out')
-  setTimeout(()=>s.remove(),800)
-},2500)
+  const s=document.getElementById('splash');
+  s.classList.add('out');
+  setTimeout(()=>s.remove(),900);
+},2600);
 
 // ── DATA ──
-const PALETTE=[
-  {name:'Terracotta Profonda',hex:'#8B4A3C',use:'Pareti corte, accenti'},
-  {name:'Antracite Caldo',hex:'#2C2825',use:'Libreria, zoccolino'},
-  {name:'Bianco Ossidato',hex:'#EDE8E0',use:'Soffitto, divano'},
-  {name:'Verde Muschio',hex:'#4A5240',use:'Piante, accent'},
-  {name:'Ottone Brunito',hex:'#8A6A3C',use:'Metalli, dettagli'},
-]
-const MATERIALS=[
-  {name:'Intonaco Veneziano',spec:'Finitura opaca, spatola irregolare',where:'Pareti corte',color:'#C4A882'},
-  {name:'Rovere Shou Sugi Ban',spec:'Carbonizzato, fibra aperta',where:'Libreria full-height',color:'#1A1410'},
-  {name:'Marmo Emperador Dark',spec:'Lastre 60×120cm levigato',where:'Pavimento parziale',color:'#3D2E25'},
-  {name:'Bouclé Lana Naturale',spec:'Trama irregolare non uniforme',where:'Rivestimento divano',color:'#D4C9B8'},
-  {name:'Pietra Lavica Trattata',spec:'Semi-opaca, grezzo al tatto',where:'Top coffee table',color:'#2A2520'},
-  {name:'Ceramica Smaltata',spec:'Colatura asimmetrica artigianale',where:'Oggetti decorativi',color:'#8B4A3C'},
-]
-const FURNITURE_DATA=[
-  {name:'Divano Modulare ad L',brand:'Bolia / Arflex Marenco 2026',detail:'Bouclé avena · gambe rovere · centro verso sud'},
-  {name:'Coffee Table Sculturale',brand:'Egg Collective / artigianato IT',detail:'Top pietra lavica · base ottone brunito · 38cm dal divano'},
-  {name:'Poltrona Lounge + Ottoman',brand:'Cassina Fionda / Fritz Hansen EGG',detail:'Nabuk tabacco · metallo nero · angolo lettura'},
-  {name:'Libreria Modulare',brand:'Punt Mobles Krossing / custom',detail:'Rovere carbonizzato · ripiani variabili · full-height 2.8m'},
-  {name:'Lampada a Stelo',brand:'DCW Éditions / Flos Arco 2026',detail:'Ottone brunito · ceramica · arco sulla poltrona'},
-  {name:'Tappeto Kilim Vintage',brand:'Golran / mercato vintage',detail:'Lana annodata · pattern geometrico sbiadito · 200×300cm'},
-]
-const DETAILS=[
-  ['Libro aperto a faccia in giù','Sul coffee table — segnale che qualcuno abita lo spazio.'],
-  ['Ceramica con colatura asimmetrica','Sul ripiano eye-level. Piccola imperfezione che costa e si vede.'],
-  ['Monstera con foglia piegata','In cesto di rattan scuro. Non simmetrica, non da set foto.'],
-  ['Candela consumata 2/3','Indica tempo passato, non acquisto recente.'],
-  ['Angolo tappeto sollevato','Aging simulato — toglie la rigidità da showroom.'],
-  ['Diagonale di luce sul pavimento','Effetto replicabile solo in AR live.'],
-]
+const PAL=[
+  {n:'Terracotta',h:'#8B4A3C',u:'Pareti corte, accenti'},
+  {n:'Antracite',h:'#2C2825',u:'Libreria, zoccolino'},
+  {n:'Bianco Ossidato',h:'#EDE8E0',u:'Soffitto, divano'},
+  {n:'Verde Muschio',h:'#4A5240',u:'Piante, accent'},
+  {n:'Ottone',h:'#8A6A3C',u:'Metalli, dettagli'},
+];
+const MATS=[
+  {n:'Intonaco Veneziano',s:'Finitura opaca, spatola irregolare',w:'Pareti corte',c:'#C4A882'},
+  {n:'Rovere Shou Sugi Ban',s:'Carbonizzato, fibra aperta',w:'Libreria full-height',c:'#1A1410'},
+  {n:'Marmo Emperador Dark',s:'Lastre 60×120cm levigato',w:'Pavimento parziale',c:'#3D2E25'},
+  {n:'Bouclé Lana',s:'Trama irregolare non uniforme',w:'Rivestimento divano',c:'#D4C9B8'},
+  {n:'Pietra Lavica',s:'Semi-opaca, grezzo al tatto',w:'Top coffee table',c:'#2A2520'},
+  {n:'Ceramica Smaltata',s:'Colatura asimmetrica',w:'Oggetti decorativi',c:'#8B4A3C'},
+];
+const FURN=[
+  {n:'Divano Modulare ad L',b:'Bolia / Arflex Marenco 2026',d:'Bouclé avena · gambe ottone · centro stanza'},
+  {n:'Coffee Table Sculturale',b:'Egg Collective / artigianato IT',d:'Pietra lavica · base ottone · candela'},
+  {n:'Poltrona Lounge',b:'Cassina Fionda / Fritz Hansen EGG',d:'Nabuk tabacco · gambe metallo nero'},
+  {n:'Libreria Modulare',b:'Punt Mobles / custom falegnameria',d:'Rovere carbonizzato · full-height 2m'},
+  {n:'Lampada a Stelo',b:'DCW Éditions / Flos Arco 2026',d:'Ottone brunito · paralume ceramica'},
+  {n:'Monstera + Vaso',b:'Artigianato / Serra urbana',d:'Foglie tagliate · vaso terracotta scuro'},
+];
+const DET=[
+  ['Libro aperto sul tavolo','Segnale che qualcuno abita lo spazio, non lo espone.'],
+  ['Ceramica con colatura','Imperfezione costosa sul ripiano eye-level.'],
+  ['Foglia piegata monstera','Non simmetrica, non da set fotografico.'],
+  ['Candela consumata 2/3','Indica tempo vissuto, non acquisto recente.'],
+  ['Tappeto leggermente sollevato','Aging simulato — toglie rigidità da showroom.'],
+  ['Luce lampada che trema','Shader flickering 24fps simulato in Three.js.'],
+];
 const STEPS=[
-  'Analisi spaziale stanza reale…',
-  'Inizializzazione Three.js renderer…',
-  'Caricamento geometrie 3D…',
+  'Analisi dimensioni stanza…',
+  'Setup renderer WebGL…',
+  'Costruzione geometrie divano…',
+  'Costruzione libreria e libri…',
+  'Costruzione lampada e pianta…',
   'Applicazione materiali PBR…',
-  'Setup luci dinamiche…',
-  'Calcolo ombre in tempo reale…',
-  'Posizionamento mobili…',
-  'Ottimizzazione 60fps…',
-  'Scena 3D pronta ✦',
-]
+  'Setup luci e ombre…',
+  'Ottimizzazione mobile…',
+  'Scena pronta ✦',
+];
 
-// ── THREE.JS SETUP ──
-const canvas3d = document.getElementById('threeCanvas')
-const viewport = document.getElementById('viewport')
+// ── THREE SETUP ──
+const canvas = document.getElementById('c3d');
+const vp = document.getElementById('viewport');
 
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas3d,
-  alpha: true,         // transparent background → shows video underneath
-  antialias: true,
-  powerPreference: 'high-performance'
-})
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
-renderer.outputEncoding = THREE.sRGBEncoding
-renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = 1.2
+const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
 
-const scene = new THREE.Scene()
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 50);
+camera.position.set(0, 1.6, 4.5);
+camera.lookAt(0, 0.5, 0);
 
-// Camera with FOV matching phone camera roughly
-const camera = new THREE.PerspectiveCamera(65, 1, 0.1, 100)
-camera.position.set(0, 1.6, 3.5)
-camera.lookAt(0, 0, 0)
-
-function resizeRenderer(){
-  const w = viewport.clientWidth, h = viewport.clientHeight
-  renderer.setSize(w, h, false)
-  camera.aspect = w/h
-  camera.updateProjectionMatrix()
+function resize(){
+  const w=vp.clientWidth, h=vp.clientHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h;
+  camera.updateProjectionMatrix();
 }
-window.addEventListener('resize', resizeRenderer)
-resizeRenderer()
+window.addEventListener('resize',resize); resize();
 
-// ── LIGHTING ──
-// Ambient warm
-const ambientLight = new THREE.AmbientLight(0xFFE8C8, 0.6)
-scene.add(ambientLight)
+// Lights
+scene.add(new THREE.AmbientLight(0xFFE8C8, 0.5));
+const sun = new THREE.DirectionalLight(0xFFF5E0, 2.0);
+sun.position.set(4,6,3); sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-6; sun.shadow.camera.right=6;
+sun.shadow.camera.top=6; sun.shadow.camera.bottom=-6;
+sun.shadow.bias=-0.001;
+scene.add(sun);
+const fill = new THREE.PointLight(0xFFAA60,0.7,10);
+fill.position.set(-3,3,2); scene.add(fill);
+const lampGlow = new THREE.PointLight(0xFFCC77,1.5,5);
+lampGlow.position.set(2.2,1.4,-0.6); scene.add(lampGlow);
 
-// Main directional (window sun)
-const sunLight = new THREE.DirectionalLight(0xFFF0D0, 1.8)
-sunLight.position.set(3, 5, 2)
-sunLight.castShadow = true
-sunLight.shadow.mapSize.width = 1024
-sunLight.shadow.mapSize.height = 1024
-sunLight.shadow.camera.near = 0.1
-sunLight.shadow.camera.far = 20
-sunLight.shadow.camera.left = -5
-sunLight.shadow.camera.right = 5
-sunLight.shadow.camera.top = 5
-sunLight.shadow.camera.bottom = -5
-sunLight.shadow.bias = -0.001
-scene.add(sunLight)
+// Shadow floor
+const shadowFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(20,20),
+  new THREE.ShadowMaterial({opacity:0.3})
+);
+shadowFloor.rotation.x=-Math.PI/2; shadowFloor.receiveShadow=true;
+scene.add(shadowFloor);
 
-// Warm fill from left
-const fillLight = new THREE.PointLight(0xFFAA60, 0.8, 8)
-fillLight.position.set(-2, 2, 1)
-scene.add(fillLight)
+// ── MATERIALS ──
+const M = {
+  boucle:   new THREE.MeshStandardMaterial({color:0xD4C9B8, roughness:0.95, metalness:0}),
+  bouclePillow1: new THREE.MeshStandardMaterial({color:0x4A5240, roughness:0.9, metalness:0}),
+  bouclePillow2: new THREE.MeshStandardMaterial({color:0x8B4A3C, roughness:0.9, metalness:0}),
+  lava:     new THREE.MeshStandardMaterial({color:0x2A2520, roughness:0.92, metalness:0}),
+  brass:    new THREE.MeshStandardMaterial({color:0xC4A46B, roughness:0.25, metalness:0.92}),
+  dkBrass:  new THREE.MeshStandardMaterial({color:0x8A6A3C, roughness:0.35, metalness:0.88}),
+  darkWood: new THREE.MeshStandardMaterial({color:0x1A1208, roughness:0.85, metalness:0.02}),
+  nabuk:    new THREE.MeshStandardMaterial({color:0x8B7A5C, roughness:0.88, metalness:0}),
+  blackMetal: new THREE.MeshStandardMaterial({color:0x1A1A1A, roughness:0.5, metalness:0.85}),
+  shade:    new THREE.MeshStandardMaterial({color:0xD4A860, roughness:0.5, metalness:0.2, side:THREE.DoubleSide}),
+  leaf:     new THREE.MeshStandardMaterial({color:0x3A5230, roughness:0.75, metalness:0, side:THREE.DoubleSide}),
+  pot:      new THREE.MeshStandardMaterial({color:0x5C3D2E, roughness:0.85, metalness:0}),
+  ceramic:  new THREE.MeshStandardMaterial({color:0xEDE8E0, roughness:0.18, metalness:0.02}),
+  terra:    new THREE.MeshStandardMaterial({color:0x8B4A3C, roughness:0.78, metalness:0}),
+  rug:      new THREE.MeshStandardMaterial({color:0x2A1F15, roughness:1.0, metalness:0}),
+};
 
-// Floor lamp point light (animated)
-const lampLight = new THREE.PointLight(0xFFCC77, 1.2, 4)
-lampLight.position.set(1.8, 1.5, -0.5)
-lampLight.castShadow = false
-scene.add(lampLight)
-
-// ── INVISIBLE FLOOR (receives shadows) ──
-const floorGeo = new THREE.PlaneGeometry(20, 20)
-const floorMat = new THREE.ShadowMaterial({ opacity: 0.35 })
-const floor = new THREE.Mesh(floorGeo, floorMat)
-floor.rotation.x = -Math.PI/2
-floor.position.y = 0
-floor.receiveShadow = true
-scene.add(floor)
-
-// ── FURNITURE BUILDERS (procedural high-quality meshes) ──
-
-function hexToColor(hex){ return new THREE.Color(hex) }
-
-// Shared materials
-const mats = {
-  bouclé: new THREE.MeshStandardMaterial({
-    color: 0xD4C9B8, roughness: 0.95, metalness: 0,
-    // simulate bouclé texture with roughnessMap approximation
-  }),
-  darkWood: new THREE.MeshStandardMaterial({ color: 0x1A1410, roughness: 0.8, metalness: 0.05 }),
-  lavaRock: new THREE.MeshStandardMaterial({ color: 0x2A2520, roughness: 0.9, metalness: 0 }),
-  brass: new THREE.MeshStandardMaterial({ color: 0xC4A46B, roughness: 0.3, metalness: 0.9 }),
-  darkBrass: new THREE.MeshStandardMaterial({ color: 0x8A6A3C, roughness: 0.4, metalness: 0.85 }),
-  green: new THREE.MeshStandardMaterial({ color: 0x4A5240, roughness: 0.8, metalness: 0 }),
-  terracotta: new THREE.MeshStandardMaterial({ color: 0x8B4A3C, roughness: 0.75, metalness: 0 }),
-  nabuk: new THREE.MeshStandardMaterial({ color: 0x8B7A5C, roughness: 0.85, metalness: 0 }),
-  ceramic: new THREE.MeshStandardMaterial({ color: 0xEDE8E0, roughness: 0.2, metalness: 0 }),
-  lampShade: new THREE.MeshStandardMaterial({ color: 0xC4A46B, roughness: 0.5, metalness: 0.3, side: THREE.DoubleSide }),
-  leafGreen: new THREE.MeshStandardMaterial({ color: 0x3A5230, roughness: 0.7, metalness: 0, side: THREE.DoubleSide }),
-  pot: new THREE.MeshStandardMaterial({ color: 0x5C3D2E, roughness: 0.8, metalness: 0 }),
+function mesh(geo, mat, castShadow=true, receiveShadow=true){
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow=castShadow; m.receiveShadow=receiveShadow;
+  return m;
 }
 
 // ── SOFA ──
-function buildSofa(){
-  const group = new THREE.Group()
-  // Seat cushion
-  const seatGeo = new THREE.BoxGeometry(2.2, 0.28, 0.9)
-  const seat = new THREE.Mesh(seatGeo, mats.boucl
+function makeSofa(){
+  const g = new THREE.Group();
+  // Main seat
+  const seat = mesh(new THREE.BoxGeometry(2.4,0.3,1.0), M.boucle);
+  seat.position.y=0.3; g.add(seat);
+  // Back
+  const back = mesh(new THREE.BoxGeometry(2.4,0.82,0.24), M.boucle);
+  back.position.set(0,0.82,-0.38); g.add(back);
+  // Armrests
+  [-1.18,1.18].forEach(x=>{
+    const arm = mesh(new THREE.BoxGeometry(0.22,0.2,1.0), M.boucle);
+    arm.position.set(x,0.47,0); g.add(arm);
+  });
+  // L-extension
+  const lext = mesh(new THREE.BoxGeometry(1.0,0.3,0.95), M.boucle);
+  lext.position.set(1.7,0.3,0.95); g.add(lext);
+  // Legs
+  const legGeo = new THREE.CylinderGeometry(0.03,0.03,0.2,8);
+  [[-1.05,0,-0.42],[1.05,0,-0.42],[-1.05,0,0.42],[1.05,0,0.42]].forEach(([x,y,z])=>{
+    const l=mesh(legGeo,M.brass); l.position.set(x,0.1,z); g.add(l);
+  });
+  // Pillows
+  const pg = new THREE.BoxGeometry(0.45,0.42,0.12);
+  const p1=mesh(pg,M.bouclePillow1); p1.position.set(-0.9,0.77,-0.26); p1.rotation.z=0.07; g.add(p1);
+  const p2=mesh(pg,M.bouclePillow2); p2.position.set(0.9,0.77,-0.26); p2.rotation.z=-0.06; g.add(p2);
+  return g;
+}
+
+// ── COFFEE TABLE ──
+function makeTable(){
+  const g = new THREE.Group();
+  const top = mesh(new THREE.BoxGeometry(1.2,0.06,0.6), M.lava);
+  top.position.y=0.4; g.add(top);
+  // brass trim
+  const trim = mesh(new THREE.BoxGeometry(1.22,0.025,0.62), M.dkBrass);
+  trim.position.y=0.375; g.add(trim);
+  // legs
+  const lg = new THREE.CylinderGeometry(0.02,0.024,0.38,8);
+  [[-0.48,-0.22],[0.48,-0.22],[-0.48,0.22],[0.48,0.22]].forEach(([x,z])=>{
+    const l=mesh(lg,M.dkBrass); l.position.set(x,0.19,z); g.add(l);
+  });
+  // book
+  const bk=mesh(new THREE.BoxGeometry(0.24,0.028,0.18),M.bouclePillow1);
+  bk.position.set(-0.2,0.436,0.06); bk.rotation.y=0.18; g.add(bk);
+  // candle
+  const can=mesh(new THREE.CylinderGeometry(0.024,0.024,0.11,12),M.ceramic);
+  can.position.set(0.32,0.438,-0.06); g.add(can);
+  return g;
+}
+
+// ── FLOOR LAMP ──
+function makeLamp(){
+  const g = new THREE.Group();
+  const base=mesh(new THREE.CylinderGeometry(0.13,0.16,0.05,16),M.dkBrass);
+  base.position.y=0.025; g.add(base);
+  const stem=mesh(new THREE.CylinderGeometry(0.016,0.016,1.6,8),M.dkBrass);
+  stem.position.y=0.83; g.add(stem);
+  // arm
+  const arm=mesh(new THREE.CylinderGeometry(0.013,0.013,0.55,8),M.dkBrass);
+  arm.position.set(-0.22,1.55,0); arm.rotation.z=Math.PI/4; g.add(arm);
+  // shade
+  const shade=mesh(new THREE.CylinderGeometry(0.24,0.13,0.3,20,1,true),M.shade);
+  shade.position.set(-0.42,1.68,0); g.add(shade);
+  const cap=mesh(new THREE.CircleGeometry(0.13,20),M.dkBrass);
+  cap.rotation.x=-Math.PI/2; cap.position.set(-0.42,1.83,0); g.add(cap);
+  return g;
+}
+
+// ── MONSTERA ──
+function makePlant(){
+  const g = new THREE.Group();
+  const pot=mesh(new THREE.CylinderGeometry(0.19,0.14,0.3,16),M.pot);
+  pot.position.y=0.15; g.add(pot);
+  const soil=mesh(new THREE.CircleGeometry(0.19,16),new THREE.MeshStandardMaterial({color:0x2A1A0A,roughness:1}),false,false);
+  soil.rotation.x=-Math.PI/2; soil.position.y=0.302; g.add(soil);
+  // leaves using EllipseCurve shapes
+  const leafDefs=[
+    {a:0.3,b:0.19,h:0.55,ry:0.4,rz:-0.5},{a:0.34,b:0.22,h:0.72,ry:1.3,rz:0.3},
+    {a:0.27,b:0.17,h:0.62,ry:2.2,rz:-0.7},{a:0.32,b:0.2,h:0.83,ry:3.6,rz:0.2},
+    {a:0.24,b:0.15,h:0.5,ry:4.9,rz:-0.4},
+  ];
+  leafDefs.forEach(d=>{
+    const shape=new THREE.Shape();
+    shape.absellipse(0,0,d.a,d.b,0,Math.PI*2);
+    // add characteristic monstera holes
+    const h1=new THREE.Path(); h1.absellipse(d.a*0.28,0,d.a*0.13,d.b*0.38,0,Math.PI*2); shape.holes.push(h1);
+    const h2=new THREE.Path(); h2.absellipse(-d.a*0.2,d.b*0.3,d.a*0.1,d.b*0.22,0,Math.PI*2); shape.holes.push(h2);
+    const geo=new THREE.ShapeGeometry(shape,16);
+    const lf=mesh(geo,M.leaf);
+    lf.position.set(Math.sin(d.ry)*0.08, d.h, Math.cos(d.ry)*0.08);
+    lf.rotation.set(d.rz*0.7, d.ry, d.rz);
+    g.add(lf);
+    // petiole
+    const pet=mesh(new THREE.CylinderGeometry(0.007,0.007,d.h*0.8,6),new THREE.MeshStandardMaterial({color:0x3A4A28,roughness:0.85}));
+    pet.position.set(Math.sin(d.ry)*0.04, d.h*0.42, Math.cos(d.ry)*0.04);
+    pet.rotation.set(d.rz*0.25, d.ry, d.rz*0.18);
+    g.add(pet);
+  });
+  return g;
+}
+
+// ── BOOKSHELF ──
+function makeShelf(){
+  const g=new THREE.Group();
+  const W=0.75,H=2.1,D=0.3,T=0.028;
+  // sides
+  [-W/2,W/2].forEach(x=>{
+    const s=mesh(new THREE.BoxGeometry(T,H,D),M.darkWood);
+    s.position.set(x,H/2,0); g.add(s);
+  });
+  // back
+  const bk=mesh(new THREE.BoxGeometry(W,H,T),M.darkWood);
+  bk.position.set(0,H/2,-D/2+T/2); g.add(bk);
+  // shelves + books
+  const cols=[0x8B4A3C,0x4A5240,0xC4A46B,0x2C3828,0x7A4535,0x3D5A4A,0xA0522D,0x556B2F];
+  for(let i=0;i<=5;i++){
+    const sy=(i/5)*H*0.94+0.03;
+    const sh=mesh(new THREE.BoxGeometry(W-T,T,D),M.darkWood);
+    sh.position.set(0,sy,0); g.add(sh);
+    if(i<5){
+      const shH=H*0.94/5;
+      let bx=-W/2+T+0.018;
+      for(let b=0;b<5;b++){
+        const bw=0.042+Math.sin(i*5+b*3)*0.012;
+        const bh=shH*(0.55+Math.sin(b*2.3)*0.22);
+        const bkm=new THREE.MeshStandardMaterial({color:cols[(i*5+b)%cols.length],roughness:0.82});
+        const book=mesh(new THREE.BoxGeometry(bw,bh,D*0.72),bkm);
+        book.position.set(bx+bw/2,sy+T/2+bh/2,0.02); g.add(book);
+        bx+=bw+0.01;
+        if(bx>W/2-T-0.05) break;
+      }
+      if(i===2){
+        const vase=mesh(new THREE.CylinderGeometry(0.038,0.032,0.13,12),M.terra);
+        vase.position.set(W/2-T-0.065,sy+T/2+0.065,0.02); g.add(vase);
+      }
+    }
+  }
+  return g;
+}
+
+// ── CHAIR ──
+function makeChair(){
+  const g=new THREE.Group();
+  const seat=mesh(new THREE.BoxGeometry(0.76,0.22,0.72),M.nabuk);
+  seat.position.y=0.4; g.add(seat);
+  const back=mesh(new THREE.BoxGeometry(0.76,0.72,0.16),M.nabuk);
+  back.position.set(0,0.86,-0.28); back.rotation.x=-0.07; g.add(back);
+  [-1,1].forEach(s=>{
+    const arm=mesh(new THREE.BoxGeometry(0.11,0.13,0.64),M.nabuk);
+    arm.position.set(s*0.37,0.57,-0.02); g.add(arm);
+  });
+  const lg2=new THREE.CylinderGeometry(0.02,0.02,0.34,8);
+  [[-0.3,0,-0.3],[0.3,0,-0.3],[-0.3,0,0.28],[0.3,0,0.28]].forEach(([x,y,z])=>{
+    const l=mesh(lg2,M.blackMetal); l.position.set(x,0.17,z); g.add(l);
+  });
+  return g;
+}
+
+// ── RUG ──
+function makeRug(){
+  const g=new THREE.Group();
+  const base=mesh(new THREE.BoxGeometry(3.0,0.012,2.0),M.rug,false,true);
+  g.add(base);
+  // kilim pattern stripes (thin boxes)
+  const stripeColors=[0x8B4A3C,0x4A5240,0xC4A46B,0x2C2825];
+  for(let i=0;i<8;i++){
+    const sm=new THREE.MeshStandardMaterial({color:stripeColors[i%4],roughness:1,transparent:true,opacity:0.45});
+    const stripe=new THREE.Mesh(new THREE.BoxGeometry(3.0,0.014,0.06),sm);
+    stripe.position.set(0,0.001,-0.95+i*0.27); g.add(stripe);
+  }
+  return g;
+}
+
+// ── OBJECTS REGISTRY ──
+const placed={};
+const defs={
+  sofa:  {make:makeSofa,  p:[0,0,-0.6],   ry:0},
+  table: {make:makeTable, p:[0,0,0.7],    ry:0},
+  lamp:  {make:makeLamp,  p:[2.1,0,-1.0], ry:0},
+  plant: {make:makePlant, p:[2.4,0,-0.2], ry:0.4},
+  shelf: {make:makeShelf, p:[-2.5,0,-1.8],ry:Math.PI*0.52},
+  chair: {make:makeChair, p:[1.8,0,0.6],  ry:-0.5},
+  rug:   {make:makeRug,   p:[0,0.001,0.3],ry:0},
+};
+
+function placeAll(){
+  Object.entries(defs).forEach(([k,d])=>{
+    if(placed[k]){scene.remove(placed[k]);delete placed[k];}
+    const obj=d.make(); obj.position.set(...d.p); obj.rotation.y=d.ry;
+    scene.add(obj); placed[k]=obj;
+  });
+}
+function clearAll(){
+  Object.values(placed).forEach(o=>scene.remove(o));
+  Object.keys(placed).forEach(k=>delete placed[k]);
+}
+
+// ── ANIMATE ──
+let t=0;
+(function loop(){
+  requestAnimationFrame(loop);
+  t+=0.016;
+  lampGlow.intensity=1.3+Math.sin(t*6.5)*0.1+Math.sin(t*11)*0.05;
+  renderer.render(scene,camera);
+})();
+
+// ── CAMERA ──
+const video=document.getElementById('video');
+const camprompt=document.getElementById('camprompt');
+const cerr=document.getElementById('cerr');
+let camOn=false;
+
+async function startCam(){
+  cerr.style.display='none';
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false
+    });
+    video.srcObject=stream; await video.play();
+    camprompt.classList.add('hidden'); camOn=true;
+    bCam.classList.add('on'); bCam.textContent='📷 On';
+    bGen.disabled=false;
+  }catch(e){
+    let msg='Errore accesso camera.';
+    if(e.name==='NotAllowedError') msg='Permesso negato → Impostazioni Chrome → Camera → Consenti.';
+    if(location.protocol!=='https:'&&location.hostname!=='localhost') msg='⚠️ Serve HTTPS: apri da GitHub Pages.';
+    cerr.textContent=msg; cerr.style.display='block';
+  }
+}
+document.getElementById('camBtn').addEventListener('click',startCam);
+
+// ── UI ──
+const bCam=document.getElementById('bCam');
+const bClear=document.getElementById('bClear');
+const bGen=document.getElementById('bGen');
+const bSheet=document.getElementById('bSheet');
+const loadover=document.getElementById('loadover');
+const lf=document.getElementById('lf');
+const ll=document.getElementById('ll');
+const hudtop=document.getElementById('hudtop');
+const vbar=document.getElementById('vbar');
+const pw=document.getElementById('pw');
+const pf=document.getElementById('pf');
+const pl=document.getElementById('pl');
+let generated=false,generating=false;
+
+bCam.addEventListener('click',()=>{
+  if(camOn){video.srcObject?.getTracks().forEach(t=>t.stop());video.srcObject=null;camOn=false;camprompt.classList.remove('hidden');bCam.classList.remove('on');bCam.textContent='📷';}
+  else startCam();
+});
+
+bClear.addEventListener('click',()=>{clearAll();hudtop.textContent='SCENA SVUOTATA';});
+
+bGen.addEventListener('click',()=>{
+  if(generating)return;
+  generating=true; bGen.disabled=true;
+  loadover.classList.add('show'); lf.style.width='0%';
+  let step=0;
+  const iv=setInterval(()=>{
+    step++;
+    lf.style.width=Math.round(step/STEPS.length*100)+'%';
+    ll.textContent=STEPS[step-1]||'';
+    if(step>=STEPS.length){
+      clearInterval(iv);
+      setTimeout(()=>{
+        loadover.classList.remove('show');
+        generating=false; generated=true;
+        placeAll();
+        bGen.disabled=false; bGen.textContent='⟳ Rigenera';
+        bSheet.disabled=false; bClear.disabled=false;
+        hudtop.textContent='AR ATTIVO · 7 MODELLI 3D · OMBRE LIVE';
+        vbar.style.display='block';
+        pw.style.display='block'; pf.style.width='100%'; pl.textContent='Scena 3D pronta ✦';
+        openSheet(); setTab('arr');
+      },350);
+    }
+  },440);
+});
+
+bSheet.addEventListener('click',()=>sheetOpen?closeSheet():openSheet());
+
+// ── TOUCH ROTATE ──
+let tx0=0,ty0=0;
+document.getElementById('viewport').addEventListener('touchstart',e=>{
+  if(e.touches.length===1){tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;}
+},{passive:true});
+document.getElementById('viewport').addEventListener('touchmove',e=>{
+  if(!generated||e.touches.length!==1)return;
+  const dx=(e.touches[0].clientX-tx0)*0.006;
+  const dy=(e.touches[0].clientY-ty0)*0.004;
+  Object.values(placed).forEach(o=>{o.rotation.y+=dx;});
+  camera.position.y=Math.max(0.5,Math.min(3.5,camera.position.y+dy));
+  camera.lookAt(0,0.5,0);
+  tx0=e.touches[0].clientX; ty0=e.touches[0].clientY;
+},{passive:true});
+
+// ── SHEET ──
+const sheet=document.getElementById('sheet');
+const shbody=document.getElementById('shbody');
+let sheetOpen=false,curTab='brief';
+
+function openSheet(){sheet.classList.add('open');sheetOpen=true;renderTab(curTab);}
+function closeSheet(){sheet.classList.remove('open');sheetOpen=false;}
+document.getElementById('shh').addEventListener('click',()=>sheetOpen?closeSheet():openSheet());
+document.getElementById('shtabs').addEventListener('click',e=>{
+  const t=e.target.closest('.stab');if(t)setTab(t.dataset.t);
+});
+function setTab(t){
+  curTab=t;
+  document.querySelectorAll('.stab').forEach(el=>el.classList.toggle('on',el.dataset.t===t));
+  renderTab(t);if(!sheetOpen)openSheet();
+}
+
+const sel={room:'Soggiorno',mood:'Brutalismo Caldo',budget:'Premium',expo:'Sud'};
+const ROOMS=['Soggiorno','Camera da Letto','Cucina','Home Office','Bagno','Ingresso'];
+const MOODS=['Brutalismo Caldo','Wabi-Sabi','New Mediterranean','Quiet Luxury','Biophilic','Industrial'];
+const BUDGETS=['Mid','Premium','Ultra-Luxury'];
+const EXPS=['Nord','Sud','Est','Ovest','Lucernario'];
+
+function chips(arr,k){
+  return`<div class="chips">${arr.map(v=>`<button class="chip${sel[k]===v?' on':''}" onclick="sel['${k}']='${v}';this.closest('.chips').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${v}</button>`).join('')}</div>`;
+}
+
+function renderTab(t){
+  let h='';
+  if(t==='brief'){
+    h=`<span class="slbl">Stanza</span>
+    <select class="bsel" onchange="sel.room=this.value">${ROOMS.map(r=>`<option${r===sel.room?' selected':''}>${r}</option>`).join('')}</select>
+    <span class="slbl">Mood</span>${chips(MOODS,'mood')}
+    <span class="slbl">Budget</span>${chips(BUDGETS,'budget')}
+    <span class="slbl">Esposizione</span>${chips(EXPS,'expo')}
+    <div style="background:rgba(139,74,60,.08);border:1px solid rgba(139,74,60,.18);border-radius:2px;padding:.7rem;margin-top:.4rem">
+      <div style="font-size:.46rem;color:#8B4A3C;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.35rem">Concept</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:.92rem;font-style:italic;line-height:1.4">Terra Bruciata: Intimità Tettonica in Luce Radente</div>
+    </div>`;
+  } else if(t==='pal'){
+    h=`<span class="slbl">Palette</span>
+    <div class="pgrid">${PAL.map(p=>`<div><div class="sw" style="background:${p.h}"></div><div class="swn">${p.n.split(' ')[0]}<br><span style="color:var(--gold)">${p.h}</span></div></div>`).join('')}</div>
+    ${PAL.map(p=>`<div class="mrow"><div class="mdot" style="background:${p.h}"></div><div><div class="mn">${p.n}</div><div class="ms">${p.u}</div></div></div>`).join('')}`;
+  } else if(t==='mat'){
+    h=`<span class="slbl">Materiali PBR</span>
+    ${MATS.map(m=>`<div class="mrow"><div class="mdot" style="background:${m.c}"></div><div><div class="mn">${m.n}</div><div class="ms">${m.s}</div><div class="mw">${m.w}</div></div></div>`).join('')}`;
+  } else if(t==='arr'){
+    h=`<span class="slbl">Modelli 3D nella Scena</span>
+    <div style="background:rgba(196,164,107,.06);border:1px solid rgba(196,164,107,.14);border-radius:2px;padding:.65rem;margin-bottom:.75rem;font-size:.52rem;color:var(--dim);line-height:1.75">
+      👆 <b style="color:var(--gold)">Trascina</b> per ruotare la scena<br>
+      ↕ <b style="color:var(--gold)">Scorri su/giù</b> per cambiare altezza camera
+    </div>
+    ${FURN.map(f=>`<div class="frow"><div class="fn">${f.n}</div><div class="fb">${f.b}</div><div class="fd">${f.d}</div></div>`).join('')}`;
+  } else if(t==='det'){
+    h=`<span class="slbl">Micro-Dettagli</span>
+    ${DET.map(d=>`<div class="dc"><div class="dct">${d[0]}</div><div class="dcc">${d[1]}</div></div>`).join('')}`;
+  }
+  shbody.innerHTML=h;
+}
+renderTab('brief');
+
+let sty0=0;
+sheet.addEventListener('touchstart',e=>{sty0=e.touches[0].clientY;},{passive:true});
+sheet.addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-sty0>65)closeSheet();},{passive:true});
+</script>
+</body>
+</html>
